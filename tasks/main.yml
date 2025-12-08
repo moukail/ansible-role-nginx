@@ -1,0 +1,28 @@
+---
+- name: Add the user "{{ user }}"
+  ansible.builtin.user:
+    name: "{{ user }}"
+    create_home: false
+    system: true
+    state: present
+
+- name: Get current nginx version
+  ansible.builtin.shell: nginx -v 2>&1 | cut -f2 -d'/' | cut -f1 -d' '
+  register: current_version
+  changed_when: false
+
+- name: Check if nginx is already installed
+  ansible.builtin.debug:
+    msg: "Current nginx version is {{ current_version.stdout }}"
+
+- name: Compile Nginx from source code
+  ansible.builtin.include_tasks: compile.yml
+  when:
+    - current_version.stdout != nginx_ver
+    - compile
+
+- name: Install Nginx from repository
+  ansible.builtin.include_tasks: install.yml
+  when:
+    - current_version.stdout != nginx_ver
+    - not compile

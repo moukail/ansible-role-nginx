@@ -1,0 +1,76 @@
+---
+- name: Installing dependencies
+  ansible.builtin.package:
+    name: "{{ (ansible_facts['os_family'] | lower == 'redhat') | ternary(build_deps_redhat, build_deps_debian) }}"
+    state: present
+
+- name: Create temporary build directory
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: build
+  register: tmp_dir
+
+- name: Downloading NGINX sources
+  ansible.builtin.get_url:
+    url: "{{ nginx_tarball_url }}"
+    dest: "{{ tmp_dir.path }}/nginx-{{ nginx_ver }}.tar.gz"
+  register: nginx_source
+
+- name: Unpacking NGINX
+  ansible.builtin.unarchive:
+    copy: false
+    dest: "{{ tmp_dir.path }}"
+    src: "{{ nginx_source.dest }}"
+
+- name: Set install_dir
+  ansible.builtin.set_fact:
+    install_dir: "{{ tmp_dir.path }}/nginx-{{ nginx_ver }}"
+
+- name: Configuring NGINX source with custom modules
+  ansible.builtin.command: >
+    ./configure --prefix=/usr --conf-path=/etc/nginx/nginx.conf --builddir=/usr/local
+    --modules-path=/etc/nginx/modules --error-log-path=/var/log/nginx/error.log
+    --pid-path=/var/run/nginx.pid --user={{ user }} --group={{ user }} --build=nginx28
+    --with-pcre --with-threads --with-file-aio --with-http_ssl_module --with-http_v2_module
+  args:
+    chdir: "{{ install_dir }}"
+    creates: "{{ install_dir }}/Makefile"
+
+- name: Installing NGINX
+  ansible.builtin.shell: make -j$(nproc) && make install
+  args:
+    chdir: "{{ install_dir }}"
+
+- name: Delete temporary directory
+  ansible.builtin.file:
+    path: "{{ tmp_dir.path }}"
+    state: absent
+
+- name: Creating proxy_params file
+  ansible.builtin.copy:
+    src: proxy_params.conf
+    dest: /etc/nginx/proxy_params
+
+- name: Creating NGINX conf file
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+
+- name: Copy default website
+  ansible.builtin.copy:
+    src: public
+    dest: /var/www/default/
+
+- name: Copy default website
+  ansible.builtin.copy:
+    src: default.conf
+    dest: /etc/nginx/conf.d/
+
+- name: Installing NGINX init script (service)
+  notify: Restart Nginx
+  ansible.builtin.copy:
+    src: nginx.service
+    dest: /etc/systemd/system/nginx.service
+    owner: root
+    group: root
+    mode: '0755'
