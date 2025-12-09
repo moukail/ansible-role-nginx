@@ -1,5 +1,3 @@
 ---
 user: nginx
-#project_name: webapp
-#domain_name: localhost
 nginx_ver: 1.28.0
