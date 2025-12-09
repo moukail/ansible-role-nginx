@@ -16,13 +16,5 @@
     msg: "Current nginx version is {{ current_version.stdout }}"
 
 - name: Compile Nginx from source code
-  ansible.builtin.include_tasks: compile.yml
-  when:
-    - current_version.stdout != nginx_ver
-    - compile
-
-- name: Install Nginx from repository
   ansible.builtin.include_tasks: install.yml
-  when:
-    - current_version.stdout != nginx_ver
-    - not compile
+  when: current_version.stdout != nginx_ver
