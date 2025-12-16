@@ -17,4 +17,4 @@
 
 - name: Compile Nginx from source code
   ansible.builtin.include_tasks: install.yml
-  when: current_version.stdout != nginx_ver
+  when: current_version.stdout != nginx_version

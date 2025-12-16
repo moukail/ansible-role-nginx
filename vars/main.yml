@@ -1,5 +1,5 @@
 ---
-nginx_tarball_url: "http://nginx.org/download/nginx-{{ nginx_ver }}.tar.gz"
+download_url: "http://nginx.org/download/nginx-{{ nginx_version }}.tar.gz"
 
 build_deps_debian:
   - gcc
